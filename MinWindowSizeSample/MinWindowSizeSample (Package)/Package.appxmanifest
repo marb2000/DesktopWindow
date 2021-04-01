@@ -31,8 +31,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="MinWindowSizeSample (Package)"
-        Description="MinWindowSizeSample (Package)"
+        DisplayName="DesktopWindow Sample"
+        Description="DesktopWindow Sample"
         BackgroundColor="transparent"
         Square150x150Logo="Images\Square150x150Logo.png"
         Square44x44Logo="Images\Square44x44Logo.png">

@@ -1,8 +1,8 @@
 ﻿<Application
-    x:Class="MinWindowSizeSample.App"
+    x:Class="DesktopWindowSample.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:MinWindowSizeSample">
+    xmlns:local="using:DesktopWindowSample">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

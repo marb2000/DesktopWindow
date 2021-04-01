@@ -1,20 +1,44 @@
 ﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 
 using System;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 using WinRT;
-using Microsoft.UI.Xaml.Markup;
-using Windows.Foundation;
+
+// Effective pixels = epx
+// Win32 methods work with pixels
+
 
 namespace WinUI.Desktop
 {
+    public class WindowPosition
+    {
+        public int Top { get; private set; }
+        public int Left { get; private set; }
+        public WindowPosition(int top, int left)
+        {
+            this.Top = top;
+            this.Left = left;
+        }
+    }
+
+    public class WindowSizingEventArgs : EventArgs
+    {
+        public DesktopWindow Window { get; private set; }
+        public WindowSizingEventArgs(DesktopWindow window)
+        {
+            Window = window;
+        }
+    }
+
     public class WindowClosingEventArgs : EventArgs
     {
-        public ExtendedWindow Window { get; set; }
+        public DesktopWindow Window { get; private set; }
+        public WindowClosingEventArgs(DesktopWindow window)
+        {
+            Window = window;
+        }
+
         public void TryCancel()
         {
             Window.IsClosing = true;
@@ -24,32 +48,30 @@ namespace WinUI.Desktop
 
     public class WindowMovingEventArgs : EventArgs
     {
-        public ExtendedWindow Window { get; set; }
-        public int Top { get; set; }
-        public int Left { get; set; }
+        public DesktopWindow Window { get; private set; }
+        public WindowPosition NewPosition { get; private set; }
+        public int Top { get; private set; }
+        public int Left { get; private set; }
+        public WindowMovingEventArgs(DesktopWindow window, WindowPosition windowPosition)
+        {
+            Window = window;
+            NewPosition = new(windowPosition.Top, windowPosition.Left);
+        }
     }
 
-    public class ExtendedWindow : Window
+    public class DesktopWindow : Window
     {
-        public enum Placement { Center } //Future, align to the top corner, etc..
+        public enum Placement { Center, TopLeftCorner } //Future: align to the top corner, etc..
 
         public int Width
         {
             get
             {
-                //Get the width
-                PInvoke.RECT rc;
-                PInvoke.User32.GetWindowRect(_hwnd, out rc);
-                int currentWidthInPixels = rc.right - rc.left;
-
-                var dpi = PInvoke.User32.GetDpiForWindow(_hwnd);
-                float scalingFactor = (float)dpi / 96;
-
-                return (int)(currentWidthInPixels / scalingFactor);
+                return ConvertPixelToEpx(_hwnd, GetWidthWin32(_hwnd));
             }
             set
             {
-                SetWindowWidthWin32(_hwnd, value);
+                SetWindowWidthWin32(_hwnd, ConvertEpxToPixel(_hwnd, value));
             }
         }
 
@@ -57,23 +79,14 @@ namespace WinUI.Desktop
         {
             get
             {
-                //Get the width
-                PInvoke.RECT rc;
-                PInvoke.User32.GetWindowRect(_hwnd, out rc);
-                int currentHeightInPixels = rc.bottom - rc.top;
-
-                var dpi = PInvoke.User32.GetDpiForWindow(_hwnd);
-                float scalingFactor = (float)dpi / 96;
-
-                return (int)(currentHeightInPixels / scalingFactor);
-
+                return ConvertPixelToEpx(_hwnd,GetHeightWin32(_hwnd));
             }
             set
             {
-                SetWindowHeightWin32(_hwnd, value);
+                SetWindowHeightWin32(_hwnd, ConvertEpxToPixel(_hwnd, value));
             }
         }
-
+        
         public int MinWidth { get; set; }
         public int MinHeight { get; set; }
         public int MaxWidth { get; set; }
@@ -83,14 +96,14 @@ namespace WinUI.Desktop
 
         public event EventHandler<WindowClosingEventArgs> Closing;
         public event EventHandler<WindowMovingEventArgs> Moving;
+        public event EventHandler<WindowSizingEventArgs> Sizing;
 
-        private IntPtr _hwnd = IntPtr.Zero;
         public IntPtr Hwnd
         {
-            get { return Hwnd; }
+            get { return _hwnd; }
         }
 
-        public ExtendedWindow()
+        public DesktopWindow()
         {
             SubClassingWin32();
         }
@@ -102,30 +115,61 @@ namespace WinUI.Desktop
                 case Placement.Center:
                     CenterWindowInMonitorWin32(_hwnd);
                     break;
+                case Placement.TopLeftCorner:
+                    SetWindowPlacement(0, 0);
+                    break;
             }
         }
 
-        public void SetWindowPlacement(int top, int left)
+        public void SetWindowPlacement(int topExp, int leftExp)
         {
-            SetWindowPlacementWin32(_hwnd, top, left);
+            SetWindowPlacementWin32(_hwnd, ConvertEpxToPixel(_hwnd, topExp),
+                                           ConvertEpxToPixel(_hwnd, leftExp));
         }
+
+        public WindowPosition GetWindowPosition()
+        {
+            //windowPosition comes in pixels(Win32), so you need to convert into epx
+            WindowPosition windowPosition = GetWindowPositionWin32(_hwnd);
+
+            return new(ConvertPixelToEpx(_hwnd, windowPosition.Top),
+                       ConvertPixelToEpx(_hwnd, windowPosition.Left));
+        }
+                
+        public string Icon
+        {
+            get { return _iconResource; }
+            set
+            {
+                _iconResource = value;
+                LoadIcon(_hwnd, _iconResource);
+            }
+        }
+
+        #region Private
+        private string _iconResource;
+        private IntPtr _hwnd = IntPtr.Zero;
 
         private void OnClosing()
         {
-            WindowClosingEventArgs windowClosingEventArgs = new WindowClosingEventArgs();
-            windowClosingEventArgs.Window = this;
+            WindowClosingEventArgs windowClosingEventArgs = new(this);
             Closing.Invoke(this, windowClosingEventArgs);
         }
 
-        private void OnWindowMoving(int xPos, int yPos)
+        private void OnWindowMoving()
         {
-            WindowMovingEventArgs windowMovingEventArgs = new WindowMovingEventArgs();
-            windowMovingEventArgs.Window = this;
-            
-                       
-            windowMovingEventArgs.Top = yPos; //TODO
-            windowMovingEventArgs.Left = xPos; //TODO
+            var windowPosition = GetWindowPositionWin32(_hwnd);
+            //windowPosition comes in pixels(Win32), so you need to convert into epx
+            WindowMovingEventArgs windowMovingEventArgs = new(this, 
+                new WindowPosition(
+                    ConvertPixelToEpx(_hwnd, windowPosition.Top),
+                    ConvertPixelToEpx(_hwnd, windowPosition.Left)));
             Moving.Invoke(this, windowMovingEventArgs);
+        }
+        private void OnWindowSizing()
+        {
+            WindowSizingEventArgs windowSizingEventArgs = new(this);
+            Sizing.Invoke(this, windowSizingEventArgs);
         }
 
         private delegate IntPtr WinProc(IntPtr hWnd, PInvoke.User32.WindowMessage Msg, IntPtr wParam, IntPtr lParam);
@@ -142,24 +186,14 @@ namespace WinUI.Desktop
             _hwnd = this.As<IWindowNative>().WindowHandle;
             if (_hwnd == IntPtr.Zero)
             {
-                throw new Exception("The Window Handle is null.");
+                throw new NullReferenceException("The Window Handle is null.");
 
             }
             newWndProc = new WinProc(NewWindowProc);
             oldWndProc = SetWindowLong(_hwnd, PInvoke.User32.WindowLongIndexFlags.GWL_WNDPROC, newWndProc);
         }
 
-        private string _iconResource;
-        public string Icon
-        {
-            get { return _iconResource; }
-            set
-            {
-                _iconResource = value;
-                LoadIcon(_hwnd, _iconResource);
-            }
-        }
-
+  
 
         private void LoadIcon(IntPtr hwnd, string iconName)
         {
@@ -171,9 +205,8 @@ namespace WinUI.Desktop
 
         }
 
-
         [StructLayout(LayoutKind.Sequential)]
-        struct MINMAXINFO
+        private struct MINMAXINFO
         {
             public PInvoke.POINT ptReserved;
             public PInvoke.POINT ptMaxSize;
@@ -182,10 +215,16 @@ namespace WinUI.Desktop
             public PInvoke.POINT ptMaxTrackSize;
         }
 
-        private int ConvertEffectivePixelsToPixels(IntPtr hwnd, int effectivePixels)
+        private int ConvertEpxToPixel(IntPtr hwnd, int effectivePixels)
         {
             float scalingFactor = GetScalingFactor(hwnd);
             return (int)(effectivePixels * scalingFactor);
+        }
+
+        private int ConvertPixelToEpx(IntPtr hwnd, int pixels)
+        {
+            float scalingFactor = GetScalingFactor(hwnd);
+            return (int)(pixels / scalingFactor);
         }
 
         private IntPtr NewWindowProc(IntPtr hWnd, PInvoke.User32.WindowMessage Msg, IntPtr wParam, IntPtr lParam)
@@ -193,30 +232,18 @@ namespace WinUI.Desktop
             switch (Msg)
             {
                 case PInvoke.User32.WindowMessage.WM_GETMINMAXINFO:
-                    //float scalingFactor = GetScalingFactor(hWnd);
-
                     MINMAXINFO minMaxInfo = Marshal.PtrToStructure<MINMAXINFO>(lParam);
-
-                    // Min Width/Height
-                    //minMaxInfo.ptMinTrackSize.x = (int)(MinWidth * scalingFactor);
-                    //minMaxInfo.ptMinTrackSize.y = (int)(MinHeight * scalingFactor);
-                    minMaxInfo.ptMinTrackSize.x = ConvertEffectivePixelsToPixels(hWnd, MinWidth);
-                    minMaxInfo.ptMinTrackSize.y = ConvertEffectivePixelsToPixels(hWnd, MinHeight);
-
-
-                    //Max width/Height
-                    //minMaxInfo.ptMaxTrackSize.x = (int)(MaxWidth * scalingFactor);
-                    //minMaxInfo.ptMaxTrackSize.y = (int)(MaxHeight * scalingFactor);
-
-                    minMaxInfo.ptMaxTrackSize.x = ConvertEffectivePixelsToPixels(hWnd, MaxWidth);
-                    minMaxInfo.ptMaxTrackSize.y = ConvertEffectivePixelsToPixels(hWnd, MaxHeight);
-
+                    minMaxInfo.ptMinTrackSize.x = ConvertEpxToPixel(hWnd, MinWidth);
+                    minMaxInfo.ptMinTrackSize.y = ConvertEpxToPixel(hWnd, MinHeight);
+                    minMaxInfo.ptMaxTrackSize.x = ConvertEpxToPixel(hWnd, MaxWidth);
+                    minMaxInfo.ptMaxTrackSize.y = ConvertEpxToPixel(hWnd, MaxHeight);
                     Marshal.StructureToPtr(minMaxInfo, lParam, true);
                     break;
 
                 case PInvoke.User32.WindowMessage.WM_CLOSE:
 
-                    //Cancel the closing 
+                    //If there is a Closing event handler and the close message wasn't send via
+                    //this event (that set IsClosing=true), the message is ignored. 
                     if (this.Closing is not null)
                     {
                         if (IsClosing == false)
@@ -227,19 +254,35 @@ namespace WinUI.Desktop
                     }
                     break;
 
-                case PInvoke.User32.WindowMessage.WM_MOVING:
+                case PInvoke.User32.WindowMessage.WM_MOVE:
                     if (this.Moving is not null)
                     {
-                        var xPosInPixels = (int)((ushort)lParam & 0xff);  
-                        var yPosInPixels = (int)((ushort)lParam >>8);  
-
-                        OnWindowMoving(xPosInPixels, yPosInPixels);
-
+                        OnWindowMoving();
                     }
                     break;
-
+                case PInvoke.User32.WindowMessage.WM_SIZING:
+                    if (this.Sizing is not null)
+                    {
+                        OnWindowSizing();
+                    }
+                    break;
             }
             return CallWindowProc(oldWndProc, hWnd, Msg, wParam, lParam);
+        }
+        private int GetWidthWin32(IntPtr hwnd)
+        {
+            //Get the width
+            PInvoke.RECT rc;
+            PInvoke.User32.GetWindowRect(hwnd, out rc);
+            return rc.right - rc.left;
+        }
+
+        private int GetHeightWin32(IntPtr hwnd)
+        {
+            //Get the width
+            PInvoke.RECT rc;
+            PInvoke.User32.GetWindowRect(hwnd, out rc);
+            return rc.bottom - rc.top;
         }
 
         private static float GetScalingFactor(IntPtr hWnd)
@@ -251,26 +294,22 @@ namespace WinUI.Desktop
 
         private void SetWindowSizeWin32(IntPtr hwnd, int width, int height)
         {
-            var dpi = PInvoke.User32.GetDpiForWindow(hwnd);
-            float scalingFactor = (float)dpi / 96;
-            width = (int)(width * scalingFactor);
-            height = (int)(height * scalingFactor);
-
             PInvoke.User32.SetWindowPos(hwnd, PInvoke.User32.SpecialWindowHandles.HWND_TOP,
                                         0, 0, width, height,
                                         PInvoke.User32.SetWindowPosFlags.SWP_NOMOVE |
                                         PInvoke.User32.SetWindowPosFlags.SWP_NOACTIVATE);
         }
 
-        private void SetWindowWidthWin32(IntPtr hwnd, int width)
+        private WindowPosition GetWindowPositionWin32(IntPtr hwnd)
         {
-            var dpi = PInvoke.User32.GetDpiForWindow(hwnd);
-            float scalingFactor = (float)dpi / 96;
-            width = (int)(width * scalingFactor);
-
             PInvoke.RECT rc;
             PInvoke.User32.GetWindowRect(hwnd, out rc);
-            int currentHeightInPixels = rc.bottom - rc.top;
+            return new WindowPosition(rc.top, rc.left);
+        }
+
+        private void SetWindowWidthWin32(IntPtr hwnd, int width)
+        {
+            int currentHeightInPixels = GetHeightWin32(hwnd);
 
             PInvoke.User32.SetWindowPos(hwnd, PInvoke.User32.SpecialWindowHandles.HWND_TOP,
                                         0, 0, width, currentHeightInPixels,
@@ -279,13 +318,7 @@ namespace WinUI.Desktop
         }
         private void SetWindowHeightWin32(IntPtr hwnd, int height)
         {
-            var dpi = PInvoke.User32.GetDpiForWindow(hwnd);
-            float scalingFactor = (float)dpi / 96;
-            height = (int)(height * scalingFactor);
-
-            PInvoke.RECT rc;
-            PInvoke.User32.GetWindowRect(hwnd, out rc);
-            int currentWidthInPixels = rc.right - rc.left;
+            int currentWidthInPixels = GetWidthWin32(hwnd);
 
             PInvoke.User32.SetWindowPos(hwnd, PInvoke.User32.SpecialWindowHandles.HWND_TOP,
                                         0, 0, currentWidthInPixels, height,
@@ -295,19 +328,12 @@ namespace WinUI.Desktop
 
         private void SetWindowPlacementWin32(IntPtr hwnd, int top, int left)
         {
-            var dpi = PInvoke.User32.GetDpiForWindow(hwnd);
-            float scalingFactor = (float)dpi / 96;
-
-            int topInPixels = (int)(top * scalingFactor);
-            int lefInPixels = (int)(left * scalingFactor);
-
             PInvoke.User32.SetWindowPos(hwnd, PInvoke.User32.SpecialWindowHandles.HWND_TOP,
-                lefInPixels, topInPixels, 0, 0,
+                left, top, 0, 0,
                 PInvoke.User32.SetWindowPosFlags.SWP_NOSIZE |
                 PInvoke.User32.SetWindowPosFlags.SWP_NOZORDER |
                 PInvoke.User32.SetWindowPosFlags.SWP_NOACTIVATE);
         }
-
 
         private void CenterWindowInMonitorWin32(IntPtr hwnd)
         {
@@ -320,7 +346,7 @@ namespace WinUI.Desktop
                 PInvoke.User32.SetWindowPosFlags.SWP_NOZORDER |
                 PInvoke.User32.SetWindowPosFlags.SWP_NOACTIVATE);
         }
-        private static void ClipOrCenterRectToMonitorWin32(ref PInvoke.RECT prc, bool UseWorkArea, bool IsCenter)
+        private void ClipOrCenterRectToMonitorWin32(ref PInvoke.RECT prc, bool UseWorkArea, bool IsCenter)
         {
             IntPtr hMonitor;
             PInvoke.RECT rc;
@@ -359,5 +385,6 @@ namespace WinUI.Desktop
         {
             IntPtr WindowHandle { get; }
         }
+        #endregion
     }
 }

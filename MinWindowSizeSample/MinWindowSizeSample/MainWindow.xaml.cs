@@ -15,15 +15,15 @@ using Windows.Foundation.Collections;
 using WinUI.Desktop;
 
 
-namespace MinWindowSizeSample
+namespace DesktopWindowSample
 {
-    public sealed partial class MainWindow : ExtendedWindow
+    public sealed partial class MainWindow : DesktopWindow
     {
         public MainWindow()
         {
             this.InitializeComponent();
 
-            this.Title = "Testing Extended Window apps";
+            this.Title = "Showcase DesktopWindow API";
             
             //NEW Properties
             this.Closing += MainWindow_Closing;
@@ -40,10 +40,11 @@ namespace MinWindowSizeSample
             SetWindowPlacement(0,0);
 
             this.Moving += MainWindow_Moving;
+            this.Sizing += MainWindow_Sizing;
 
             debugTBox.Text = $" Size (Height: { this.Height } Width: { this.Width })";
 
-
+            //Events SizeChanged, and WindowMoved
             //Window Moving?
             //Windoww draggable area
             //Remove Window Borders
@@ -64,12 +65,24 @@ namespace MinWindowSizeSample
             //    myWindow.BringToFront();
         }
 
-        private void MainWindow_Moving(object sender, WindowMovingEventArgs e)
+
+        private void MainWindow_Sizing(object sender, WindowSizingEventArgs e)
         {
-            debugTBox.Text = $"Height: { this.Height } Width: { this.Width }\n Top: {e.Top} Left:{e.Left}";
-            
+            var windowPosition = GetWindowPosition();
+            debugTBox.Text = $"Height: { this.Height } Width: { this.Width }\n " +
+                $"Top: {windowPosition.Top} Left:{windowPosition.Left}";
         }
 
+        private void MainWindow_Moving(object sender, WindowMovingEventArgs e)
+        {
+            //var windowPosition = GetWindowPosition();
+
+
+            debugTBox.Text = $"Height: { this.Height } Width: { this.Width }\n " +
+                $"Top: {e.NewPosition.Top} Left:{e.NewPosition.Left}";
+                 
+        }
+         
         private async void MainWindow_Closing(object sender, WindowClosingEventArgs e)
         {
             ContentDialog contentDialog = new ContentDialog();
@@ -88,7 +101,12 @@ namespace MinWindowSizeSample
 
         private void OnCenterClick(object sender, RoutedEventArgs e)
         {
-            SetWindowPlacement(Placement.Center); ;
+            SetWindowPlacement(Placement.Center); 
+        }
+
+        private void OnTopLeft(object sender, RoutedEventArgs e)
+        {
+            SetWindowPlacement(Placement.TopLeftCorner);
         }
     }
 }
