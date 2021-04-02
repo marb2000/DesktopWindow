@@ -12,7 +12,7 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
-using WinUI.Desktop;
+using WinUIExtensions.Desktop;
 
 
 namespace DesktopWindowSample
@@ -23,9 +23,33 @@ namespace DesktopWindowSample
         {
             this.InitializeComponent();
 
+            // MUX.Window features
             this.Title = "Showcase DesktopWindow API";
-            
-            //NEW Properties
+            this.ExtendsContentIntoTitleBar = true;
+            SetTitleBar(myTitleBar);
+
+            //MainGrid.Loaded += (s, e) =>
+            //{
+            //    var parent = MainGrid.XamlRoot.Content as DependencyObject;
+            //    DependencyObject dependencyObject;
+            //    while (true)
+            //    {
+            //        dependencyObject = VisualTreeHelper.GetParent(parent);
+            //        if (dependencyObject is null)
+            //            break;
+            //        else
+            //            parent = dependencyObject;
+            //    }
+              
+            //    var btn = FindControl<Button>(parent as UIElement, "MinimizeButton");
+            //    btn.Height = myTitleBar.Height;
+            //    var btn2 = FindControl<Button>(parent as UIElement, "MaximizeButton");
+            //    btn2.Height = myTitleBar.Height;
+            //    var btn3 = FindControl<Button>(parent as UIElement, "CloseButton");
+            //    btn3.Height = myTitleBar.Height;
+            //};
+           
+            //DesktopWindow Features
             this.Closing += MainWindow_Closing;
             this.MaxHeight = 800;
             this.MaxWidth = 1024;
@@ -37,7 +61,7 @@ namespace DesktopWindowSample
 
             this.Icon = "WinUI3.ico";
 
-            SetWindowPlacement(0,0);
+            SetWindowPlacement(0, 0);
 
             this.Moving += MainWindow_Moving;
             this.Sizing += MainWindow_Sizing;
@@ -65,6 +89,31 @@ namespace DesktopWindowSample
             //    myWindow.BringToFront();
         }
 
+        public static T FindControl<T>(DependencyObject parent, string ControlName) where T : FrameworkElement
+        {
+            if (parent == null)
+                return null;
+
+            if (parent.GetType() == typeof(T) && ((T)parent).Name == ControlName)
+            {
+                return (T)parent;
+            }
+            T result = null;
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+
+                if (FindControl<T>(child, ControlName) != null)
+                {
+                    result = FindControl<T>(child, ControlName);
+                    break;
+                }
+            }
+            return result;
+        }
+
+
 
         private void MainWindow_Sizing(object sender, WindowSizingEventArgs e)
         {
@@ -80,9 +129,9 @@ namespace DesktopWindowSample
 
             debugTBox.Text = $"Height: { this.Height } Width: { this.Width }\n " +
                 $"Top: {e.NewPosition.Top} Left:{e.NewPosition.Left}";
-                 
+
         }
-         
+
         private async void MainWindow_Closing(object sender, WindowClosingEventArgs e)
         {
             ContentDialog contentDialog = new ContentDialog();
@@ -101,7 +150,7 @@ namespace DesktopWindowSample
 
         private void OnCenterClick(object sender, RoutedEventArgs e)
         {
-            SetWindowPlacement(Placement.Center); 
+            SetWindowPlacement(Placement.Center);
         }
 
         private void OnTopLeft(object sender, RoutedEventArgs e)

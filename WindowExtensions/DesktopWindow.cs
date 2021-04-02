@@ -9,7 +9,7 @@ using WinRT;
 // Win32 methods work with pixels
 
 
-namespace WinUI.Desktop
+namespace WinUIExtensions.Desktop
 {
     public class WindowPosition
     {

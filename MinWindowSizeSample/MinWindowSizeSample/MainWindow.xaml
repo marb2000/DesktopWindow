@@ -2,13 +2,21 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:DesktopWindowSample"
-    xmlns:WinUI="using:WinUI.Desktop"         
+    xmlns:WinUI="using:WinUIExtensions.Desktop"         
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid>
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20" >
+    <Grid x:Name="MainGrid">
+
+        <StackPanel Height="35" Orientation="Horizontal" 
+                    Spacing="15" x:Name="myTitleBar" HorizontalAlignment="Stretch" VerticalAlignment="Top" >
+            <Image Source="Images/windowIcon.gif" />
+            <TextBlock VerticalAlignment="Center" Text="{x:Bind Title, Mode=OneTime}" />
+        </StackPanel>
+
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20" 
+                     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
             <TextBlock Text="Hello Desktop Window!" />
             <Button Content="Center" Click="OnCenterClick" HorizontalAlignment="Center" />
             <Button Content="TopLeft" Click="OnTopLeft" HorizontalAlignment="Center" />
