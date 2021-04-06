@@ -8,10 +8,7 @@
     <Platforms>x86;x64;arm64</Platforms>
     <RuntimeIdentifiers>win10-x86;win10-x64;win10-arm64</RuntimeIdentifiers>
   </PropertyGroup>
-  <ItemGroup>
-    <None Remove="MainWindow.xaml" />
-    <None Remove="WinUI3.ico" />
-  </ItemGroup>
+   
   <ItemGroup>
     <Content Include="WinUI3.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -22,7 +19,6 @@
     <PackageReference Include="Microsoft.ProjectReunion" Version="0.5.0" />
     <PackageReference Include="Microsoft.ProjectReunion.Foundation" Version="0.5.0" />
     <PackageReference Include="Microsoft.ProjectReunion.WinUI" Version="0.5.0" />
-    <PackageReference Include="PInvoke.User32" Version="0.7.104" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
@@ -30,9 +26,4 @@
     <ProjectReference Include="..\..\WindowExtensions\WindowExtensions.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Page Update="MainWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
 </Project>

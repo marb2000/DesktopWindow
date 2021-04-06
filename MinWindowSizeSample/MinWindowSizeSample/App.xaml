@@ -125,14 +125,13 @@
                                         </VisualState>
                                     </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>
-                                <Border BorderThickness="1" BorderBrush="red" >
-                                    <!-- Added this border for Window Border -->
+                                
                                     <Grid x:Name="TitleBarMinMaxCloseContainer"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Top"
                             Visibility="{Binding CaptionVisibility, RelativeSource={RelativeSource TemplatedParent}}">
 
-                                        <Border BorderThickness="1" BorderBrush="Green">
+                                        
                                             <Grid x:Name="MinMaxCloseContainer"
                                                     HorizontalAlignment="Right"
                                                     VerticalAlignment="Top"
@@ -188,10 +187,10 @@
                                                     </Button.Resources>
                                                 </Button>
                                             </Grid>
-                                        </Border>
+                                  
 
                                     </Grid>
-                                </Border>
+         
                                 <ContentPresenter x:Name="ClientAreaPresenter"
                                                 Content="{TemplateBinding Content}"
                                                 ContentTemplate="{TemplateBinding ContentTemplate}"

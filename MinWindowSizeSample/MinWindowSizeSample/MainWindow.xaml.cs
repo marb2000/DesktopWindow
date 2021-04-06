@@ -28,29 +28,7 @@ namespace DesktopWindowSample
             this.ExtendsContentIntoTitleBar = true;
             SetTitleBar(myTitleBar);
 
-            //MainGrid.Loaded += (s, e) =>
-            //{
-            //    var parent = MainGrid.XamlRoot.Content as DependencyObject;
-            //    DependencyObject dependencyObject;
-            //    while (true)
-            //    {
-            //        dependencyObject = VisualTreeHelper.GetParent(parent);
-            //        if (dependencyObject is null)
-            //            break;
-            //        else
-            //            parent = dependencyObject;
-            //    }
-              
-            //    var btn = FindControl<Button>(parent as UIElement, "MinimizeButton");
-            //    btn.Height = myTitleBar.Height;
-            //    var btn2 = FindControl<Button>(parent as UIElement, "MaximizeButton");
-            //    btn2.Height = myTitleBar.Height;
-            //    var btn3 = FindControl<Button>(parent as UIElement, "CloseButton");
-            //    btn3.Height = myTitleBar.Height;
-            //};
-           
             //DesktopWindow Features
-            this.Closing += MainWindow_Closing;
             this.MaxHeight = 800;
             this.MaxWidth = 1024;
             this.MinHeight = 400;
@@ -63,57 +41,64 @@ namespace DesktopWindowSample
 
             SetWindowPlacement(0, 0);
 
+            this.Closing += MainWindow_Closing;
             this.Moving += MainWindow_Moving;
             this.Sizing += MainWindow_Sizing;
+            this.DpiChanged += MainWindow_DpiChanged;
+            this.OrientationChanged += MainWindow_OrientationChanged;
 
             debugTBox.Text = $" Size (Height: { this.Height } Width: { this.Width })";
 
-            //Events SizeChanged, and WindowMoved
-            //Window Moving?
-            //Windoww draggable area
-            //Remove Window Borders
-            //Full Screen Mode
-            //WinPro hook
-            //Compact Overlay
-            //Restore Window Position?
-            //            myWindow.MinimizeWindow();
-            //            myWindow.MaximizeWindow();
-            //            myWindow.RestoreWindow();
-            //            myWindow.HideWindow();`
-            //Move and resize window
-            //   myWindow.CenterOnScreen();
-            //            myWindow.SetWindowPositionAndSize(100, 100, 1024, 768);
-            //            Make Window always - on - top
-            //    myWindow.SetAlwaysOnTop(true);
-            //            Bring window to the top
-            //    myWindow.BringToFront();
+
+            var list = WinUIExtensions.Desktop.DisplayInformation.GetDisplays();
+
+            foreach (var item in list)
+            {
+                systemTBox.Text += $"Display ->" +
+                    $"\n  Device Name: {item.DeviceName}" +
+                    $"\n  Work Area: ({item.WorkArea.top},{item.WorkArea.left},{item.WorkArea.bottom},{item.WorkArea.right})" +
+                    $"\n  ScreenHeight: {item.ScreenHeight}" +
+                    $"\n  ScreenWidth:{item.ScreenWidth}" +
+                    $"\n  Effective Pixels: width({item.ScreenEfectiveWidth}), height({item.ScreenEfectiveHeight})" +
+                    $"\n  Availability {item.Availability}\n\n";
+            }
+
+            dpiChangedTBox.Text =  $"DPI: {this.Dpi}";
         }
 
-        public static T FindControl<T>(DependencyObject parent, string ControlName) where T : FrameworkElement
+        private void MainWindow_OrientationChanged(object sender, WindowOrientationChangedEventArgs e)
         {
-            if (parent == null)
-                return null;
-
-            if (parent.GetType() == typeof(T) && ((T)parent).Name == ControlName)
-            {
-                return (T)parent;
-            }
-            T result = null;
-            int count = VisualTreeHelper.GetChildrenCount(parent);
-            for (int i = 0; i < count; i++)
-            {
-                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
-
-                if (FindControl<T>(child, ControlName) != null)
-                {
-                    result = FindControl<T>(child, ControlName);
-                    break;
-                }
-            }
-            return result;
+            dpiChangedTBox.Text = $"DPI: {this.Dpi} + Orientation: { e.Orientation.ToString("g")}";
         }
 
+        private void MainWindow_DpiChanged(object sender, WindowDpiChangedEventArgs e)
+        {
+            dpiChangedTBox.Text = $"DPI Changed:{ e.Dpi} - {this.Dpi} ";
+        }
 
+        //public static T FindControl<T>(DependencyObject parent, string ControlName) where T : FrameworkElement
+        //{
+        //    if (parent == null)
+        //        return null;
+
+        //    if (parent.GetType() == typeof(T) && ((T)parent).Name == ControlName)
+        //    {
+        //        return (T)parent;
+        //    }
+        //    T result = null;
+        //    int count = VisualTreeHelper.GetChildrenCount(parent);
+        //    for (int i = 0; i < count; i++)
+        //    {
+        //        DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+
+        //        if (FindControl<T>(child, ControlName) != null)
+        //        {
+        //            result = FindControl<T>(child, ControlName);
+        //            break;
+        //        }
+        //    }
+        //    return result;
+        //}
 
         private void MainWindow_Sizing(object sender, WindowSizingEventArgs e)
         {
@@ -124,12 +109,8 @@ namespace DesktopWindowSample
 
         private void MainWindow_Moving(object sender, WindowMovingEventArgs e)
         {
-            //var windowPosition = GetWindowPosition();
-
-
             debugTBox.Text = $"Height: { this.Height } Width: { this.Width }\n " +
                 $"Top: {e.NewPosition.Top} Left:{e.NewPosition.Left}";
-
         }
 
         private async void MainWindow_Closing(object sender, WindowClosingEventArgs e)
@@ -143,7 +124,6 @@ namespace DesktopWindowSample
             var r = await contentDialog.ShowAsync();
             if (r == ContentDialogResult.Primary)
             {
-                //Should this be Cancel?
                 e.TryCancel();
             }
         }
@@ -156,6 +136,36 @@ namespace DesktopWindowSample
         private void OnTopLeft(object sender, RoutedEventArgs e)
         {
             SetWindowPlacement(Placement.TopLeftCorner);
+        }
+
+        private void OnBottomLeft(object sender, RoutedEventArgs e)
+        {
+            SetWindowPlacement(Placement.BottomLeftCorner);
+        }
+
+        private void OnMaximize(object sender, RoutedEventArgs e)
+        {
+            Maximize();
+        }
+
+        private void OnMinimize(object sender, RoutedEventArgs e)
+        {
+            Minimize();
+        }
+
+        private void OnRestore(object sender, RoutedEventArgs e)
+        {
+            Restore();
+        }
+
+        private void OnBringToTop(object sender, RoutedEventArgs e)
+        {
+            BringToTop();
+        }
+        
+        private void OnClosingApplication(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Exit();
         }
     }
 }

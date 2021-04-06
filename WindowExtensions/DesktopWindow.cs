@@ -5,12 +5,18 @@ using System.Runtime.InteropServices;
 
 using WinRT;
 
-// Effective pixels = epx
-// Win32 methods work with pixels
+//TODO:
+//Windoww draggable area
+//Remove Window Borders
+//Full Screen Mode
+//Compact Overlay
+//Restore Window and size Position
+//Always On Top 
 
 
 namespace WinUIExtensions.Desktop
 {
+
     public class WindowPosition
     {
         public int Top { get; private set; }
@@ -46,6 +52,30 @@ namespace WinUIExtensions.Desktop
         }
     }
 
+    public class WindowDpiChangedEventArgs : EventArgs
+    {
+        public DesktopWindow Window { get; private set; }
+        public int Dpi{ get; private set; }
+        
+        public WindowDpiChangedEventArgs(DesktopWindow window, int newDpi)
+        {
+            Window = window;
+            Dpi = newDpi;
+        }
+    }
+
+    public class WindowOrientationChangedEventArgs : EventArgs
+    {
+        public DesktopWindow Window { get; private set; }
+        public DesktopWindow.Orientation Orientation { get; private set; }
+
+        public WindowOrientationChangedEventArgs(DesktopWindow window, DesktopWindow.Orientation newOrientationi)
+        {
+            Window = window;
+            Orientation = newOrientationi;
+        }
+    }
+
     public class WindowMovingEventArgs : EventArgs
     {
         public DesktopWindow Window { get; private set; }
@@ -61,17 +91,19 @@ namespace WinUIExtensions.Desktop
 
     public class DesktopWindow : Window
     {
-        public enum Placement { Center, TopLeftCorner } //Future: align to the top corner, etc..
+        public enum Orientation { Landscape, Portrait }
+
+        public enum Placement { Center, TopLeftCorner, BottomLeftCorner } //Future: align to the top corner, etc..
 
         public int Width
         {
             get
             {
-                return ConvertPixelToEpx(_hwnd, GetWidthWin32(_hwnd));
+                return DisplayInformation.ConvertPixelToEpx(_hwnd, GetWidthWin32(_hwnd));
             }
             set
             {
-                SetWindowWidthWin32(_hwnd, ConvertEpxToPixel(_hwnd, value));
+                SetWindowWidthWin32(_hwnd, DisplayInformation.ConvertEpxToPixel(_hwnd, value));
             }
         }
 
@@ -79,11 +111,11 @@ namespace WinUIExtensions.Desktop
         {
             get
             {
-                return ConvertPixelToEpx(_hwnd,GetHeightWin32(_hwnd));
+                return DisplayInformation.ConvertPixelToEpx(_hwnd,GetHeightWin32(_hwnd));
             }
             set
             {
-                SetWindowHeightWin32(_hwnd, ConvertEpxToPixel(_hwnd, value));
+                SetWindowHeightWin32(_hwnd, DisplayInformation.ConvertEpxToPixel(_hwnd, value));
             }
         }
         
@@ -97,15 +129,24 @@ namespace WinUIExtensions.Desktop
         public event EventHandler<WindowClosingEventArgs> Closing;
         public event EventHandler<WindowMovingEventArgs> Moving;
         public event EventHandler<WindowSizingEventArgs> Sizing;
+        public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
+        public event EventHandler<WindowOrientationChangedEventArgs> OrientationChanged;
 
         public IntPtr Hwnd
         {
             get { return _hwnd; }
         }
 
+        public int Dpi
+        {
+            get { return PInvoke.User32.GetDpiForWindow(_hwnd); }
+        }
+
+
         public DesktopWindow()
         {
             SubClassingWin32();
+            _currentOrientation = GetWindowOrientationWin32(_hwnd);
         }
 
         public void SetWindowPlacement(Placement placement)
@@ -113,18 +154,21 @@ namespace WinUIExtensions.Desktop
             switch (placement)
             {
                 case Placement.Center:
-                    CenterWindowInMonitorWin32(_hwnd);
+                    PlacementCenterWindowInMonitorWin32(_hwnd);
                     break;
                 case Placement.TopLeftCorner:
-                    SetWindowPlacement(0, 0);
+                    PlacementTopLefWindowInMonitorWin32(_hwnd);
+                    break;
+                case Placement.BottomLeftCorner:
+                    PlacementBottomLefWindowInMonitorWin32(_hwnd);
                     break;
             }
         }
 
         public void SetWindowPlacement(int topExp, int leftExp)
         {
-            SetWindowPlacementWin32(_hwnd, ConvertEpxToPixel(_hwnd, topExp),
-                                           ConvertEpxToPixel(_hwnd, leftExp));
+            SetWindowPlacementWin32(_hwnd, DisplayInformation.ConvertEpxToPixel(_hwnd, topExp),
+                                           DisplayInformation.ConvertEpxToPixel(_hwnd, leftExp));
         }
 
         public WindowPosition GetWindowPosition()
@@ -132,8 +176,8 @@ namespace WinUIExtensions.Desktop
             //windowPosition comes in pixels(Win32), so you need to convert into epx
             WindowPosition windowPosition = GetWindowPositionWin32(_hwnd);
 
-            return new(ConvertPixelToEpx(_hwnd, windowPosition.Top),
-                       ConvertPixelToEpx(_hwnd, windowPosition.Left));
+            return new(DisplayInformation.ConvertPixelToEpx(_hwnd, windowPosition.Top),
+                       DisplayInformation.ConvertPixelToEpx(_hwnd, windowPosition.Left));
         }
                 
         public string Icon
@@ -146,9 +190,37 @@ namespace WinUIExtensions.Desktop
             }
         }
 
+        public void Maximize()
+        {
+            _ = PInvoke.User32.ShowWindow(_hwnd, PInvoke.User32.WindowShowStyle.SW_MAXIMIZE);
+        }
+
+        public void Minimize()
+        {
+            _ = PInvoke.User32.ShowWindow(_hwnd, PInvoke.User32.WindowShowStyle.SW_MINIMIZE);
+        }
+
+        public void Restore()
+        {
+            _ = PInvoke.User32.ShowWindow(_hwnd, PInvoke.User32.WindowShowStyle.SW_RESTORE);
+        }
+
+        public void Hide()
+        {
+            _ = PInvoke.User32.ShowWindow(_hwnd, PInvoke.User32.WindowShowStyle.SW_HIDE);
+        }
+
+        public void BringToTop()
+        {
+            _ = PInvoke.User32.SetWindowPos(_hwnd, PInvoke.User32.SpecialWindowHandles.HWND_TOPMOST, 0, 0, 0, 0,
+                PInvoke.User32.SetWindowPosFlags.SWP_NOMOVE | PInvoke.User32.SetWindowPosFlags.SWP_NOSIZE);
+        }
+
+
         #region Private
         private string _iconResource;
         private IntPtr _hwnd = IntPtr.Zero;
+        Orientation _currentOrientation;
 
         private void OnClosing()
         {
@@ -162,14 +234,26 @@ namespace WinUIExtensions.Desktop
             //windowPosition comes in pixels(Win32), so you need to convert into epx
             WindowMovingEventArgs windowMovingEventArgs = new(this, 
                 new WindowPosition(
-                    ConvertPixelToEpx(_hwnd, windowPosition.Top),
-                    ConvertPixelToEpx(_hwnd, windowPosition.Left)));
+                    DisplayInformation.ConvertPixelToEpx(_hwnd, windowPosition.Top),
+                    DisplayInformation.ConvertPixelToEpx(_hwnd, windowPosition.Left)));
             Moving.Invoke(this, windowMovingEventArgs);
         }
         private void OnWindowSizing()
         {
             WindowSizingEventArgs windowSizingEventArgs = new(this);
             Sizing.Invoke(this, windowSizingEventArgs);
+        }
+
+        private void OnWindowDpiChanged(int newDpi)
+        {
+            WindowDpiChangedEventArgs windowDpiChangedEvent = new(this, newDpi);
+            DpiChanged.Invoke(this, windowDpiChangedEvent);
+        }
+
+        private void OnWindowOrientationChanged(Orientation newOrinetation)
+        {
+            WindowOrientationChangedEventArgs windowOrientationChangedEventArgs = new(this, newOrinetation);
+            OrientationChanged.Invoke(this, windowOrientationChangedEventArgs);
         }
 
         private delegate IntPtr WinProc(IntPtr hWnd, PInvoke.User32.WindowMessage Msg, IntPtr wParam, IntPtr lParam);
@@ -193,8 +277,6 @@ namespace WinUIExtensions.Desktop
             oldWndProc = SetWindowLong(_hwnd, PInvoke.User32.WindowLongIndexFlags.GWL_WNDPROC, newWndProc);
         }
 
-  
-
         private void LoadIcon(IntPtr hwnd, string iconName)
         {
 
@@ -214,29 +296,17 @@ namespace WinUIExtensions.Desktop
             public PInvoke.POINT ptMinTrackSize;
             public PInvoke.POINT ptMaxTrackSize;
         }
-
-        private int ConvertEpxToPixel(IntPtr hwnd, int effectivePixels)
-        {
-            float scalingFactor = GetScalingFactor(hwnd);
-            return (int)(effectivePixels * scalingFactor);
-        }
-
-        private int ConvertPixelToEpx(IntPtr hwnd, int pixels)
-        {
-            float scalingFactor = GetScalingFactor(hwnd);
-            return (int)(pixels / scalingFactor);
-        }
-
+        
         private IntPtr NewWindowProc(IntPtr hWnd, PInvoke.User32.WindowMessage Msg, IntPtr wParam, IntPtr lParam)
         {
             switch (Msg)
             {
                 case PInvoke.User32.WindowMessage.WM_GETMINMAXINFO:
                     MINMAXINFO minMaxInfo = Marshal.PtrToStructure<MINMAXINFO>(lParam);
-                    minMaxInfo.ptMinTrackSize.x = ConvertEpxToPixel(hWnd, MinWidth);
-                    minMaxInfo.ptMinTrackSize.y = ConvertEpxToPixel(hWnd, MinHeight);
-                    minMaxInfo.ptMaxTrackSize.x = ConvertEpxToPixel(hWnd, MaxWidth);
-                    minMaxInfo.ptMaxTrackSize.y = ConvertEpxToPixel(hWnd, MaxHeight);
+                    minMaxInfo.ptMinTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MinWidth);
+                    minMaxInfo.ptMinTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MinHeight);
+                    minMaxInfo.ptMaxTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MaxWidth);
+                    minMaxInfo.ptMaxTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MaxHeight);
                     Marshal.StructureToPtr(minMaxInfo, lParam, true);
                     break;
 
@@ -266,9 +336,50 @@ namespace WinUIExtensions.Desktop
                         OnWindowSizing();
                     }
                     break;
+                case PInvoke.User32.WindowMessage.WM_DPICHANGED:
+                    if(this.DpiChanged is not null)
+                    {
+                        //g_dpi = HIWORD(wParam);
+                        uint dpi = HiWord(wParam);
+                        OnWindowDpiChanged((int)dpi);
+                    }
+                    break;
+                case PInvoke.User32.WindowMessage.WM_DISPLAYCHANGE:
+                    if (this.OrientationChanged is not null)
+                    {
+                        var newOrinetation = GetWindowOrientationWin32(hWnd);
+                        if (newOrinetation != _currentOrientation)
+                        {
+                            _currentOrientation = newOrinetation;
+                            OnWindowOrientationChanged(newOrinetation);
+                        }
+                    }
+                    break;
             }
             return CallWindowProc(oldWndProc, hWnd, Msg, wParam, lParam);
         }
+
+        private Orientation GetWindowOrientationWin32(IntPtr hwnd)
+        {
+            Orientation orientationEnum; 
+            int theScreenWidth = DisplayInformation.GetDisplay(hwnd).ScreenWidth;
+            int theScreenHeight = DisplayInformation.GetDisplay(hwnd).ScreenHeight;
+            if (theScreenWidth > theScreenHeight)
+                orientationEnum = Orientation.Landscape;
+            else
+                orientationEnum = Orientation.Portrait;
+            return orientationEnum;
+        }
+
+        private static uint HiWord(IntPtr ptr)
+        {
+            uint value = (uint)(int)ptr;
+            if ((value & 0x80000000) == 0x80000000)
+                return (value >> 16);
+            else
+                return (value >> 16) & 0xffff;
+        }
+
         private int GetWidthWin32(IntPtr hwnd)
         {
             //Get the width
@@ -283,13 +394,6 @@ namespace WinUIExtensions.Desktop
             PInvoke.RECT rc;
             PInvoke.User32.GetWindowRect(hwnd, out rc);
             return rc.bottom - rc.top;
-        }
-
-        private static float GetScalingFactor(IntPtr hWnd)
-        {
-            var dpi = PInvoke.User32.GetDpiForWindow(hWnd);
-            float scalingFactor = (float)dpi / 96;
-            return scalingFactor;
         }
 
         private void SetWindowSizeWin32(IntPtr hwnd, int width, int height)
@@ -316,6 +420,7 @@ namespace WinUIExtensions.Desktop
                                         PInvoke.User32.SetWindowPosFlags.SWP_NOMOVE |
                                         PInvoke.User32.SetWindowPosFlags.SWP_NOACTIVATE);
         }
+
         private void SetWindowHeightWin32(IntPtr hwnd, int height)
         {
             int currentWidthInPixels = GetWidthWin32(hwnd);
@@ -326,6 +431,18 @@ namespace WinUIExtensions.Desktop
                                         PInvoke.User32.SetWindowPosFlags.SWP_NOACTIVATE);
         }
 
+        private void PlacementTopLefWindowInMonitorWin32(IntPtr hwnd)
+        {
+            var displayInfo = DisplayInformation.GetDisplay(hwnd);
+            SetWindowPlacementWin32(hwnd, displayInfo.WorkArea.top, displayInfo.WorkArea.left);
+        }
+        private void PlacementBottomLefWindowInMonitorWin32(IntPtr hwnd)
+        {
+            var displayInfo = DisplayInformation.GetDisplay(hwnd);
+            SetWindowPlacementWin32(hwnd, displayInfo.WorkArea.bottom - GetHeightWin32(_hwnd), displayInfo.WorkArea.left);
+        }
+
+
         private void SetWindowPlacementWin32(IntPtr hwnd, int top, int left)
         {
             PInvoke.User32.SetWindowPos(hwnd, PInvoke.User32.SpecialWindowHandles.HWND_TOP,
@@ -335,7 +452,7 @@ namespace WinUIExtensions.Desktop
                 PInvoke.User32.SetWindowPosFlags.SWP_NOACTIVATE);
         }
 
-        private void CenterWindowInMonitorWin32(IntPtr hwnd)
+        private void PlacementCenterWindowInMonitorWin32(IntPtr hwnd)
         {
             PInvoke.RECT rc;
             PInvoke.User32.GetWindowRect(hwnd, out rc);
@@ -346,6 +463,7 @@ namespace WinUIExtensions.Desktop
                 PInvoke.User32.SetWindowPosFlags.SWP_NOZORDER |
                 PInvoke.User32.SetWindowPosFlags.SWP_NOACTIVATE);
         }
+
         private void ClipOrCenterRectToMonitorWin32(ref PInvoke.RECT prc, bool UseWorkArea, bool IsCenter)
         {
             IntPtr hMonitor;
