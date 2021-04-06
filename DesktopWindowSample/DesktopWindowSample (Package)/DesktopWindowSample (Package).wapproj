@@ -41,7 +41,7 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <DefaultLanguage>en-US</DefaultLanguage>
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
-    <EntryPointProjectUniqueName>..\MinWindowSizeSample\DesktopWindowSample.csproj</EntryPointProjectUniqueName>
+    <EntryPointProjectUniqueName>..\DesktopWindowSample\DesktopWindowSample.csproj</EntryPointProjectUniqueName>
   </PropertyGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -66,7 +66,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MinWindowSizeSample\DesktopWindowSample.csproj">
+    <ProjectReference Include="..\DesktopWindowSample\DesktopWindowSample.csproj">
       <SkipGetTargetFrameworkProperties>True</SkipGetTargetFrameworkProperties>
     </ProjectReference>
   </ItemGroup>

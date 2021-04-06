@@ -5,15 +5,6 @@ using System.Runtime.InteropServices;
 
 using WinRT;
 
-//TODO:
-//Windoww draggable area
-//Remove Window Borders
-//Full Screen Mode
-//Compact Overlay
-//Restore Window and size Position
-//Always On Top 
-
-
 namespace WinUIExtensions.Desktop
 {
 

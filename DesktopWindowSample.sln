@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31112.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{C7167F0D-BC9F-4E6E-AFE1-012C56B48DB5}") = "DesktopWindowSample (Package)", "MinWindowSizeSample\MinWindowSizeSample (Package)\DesktopWindowSample (Package).wapproj", "{64BB41AC-6E0C-49F7-BA0D-094B89C37F05}"
+Project("{C7167F0D-BC9F-4E6E-AFE1-012C56B48DB5}") = "DesktopWindowSample (Package)", "DesktopWindowSample\DesktopWindowSample (Package)\DesktopWindowSample (Package).wapproj", "{64BB41AC-6E0C-49F7-BA0D-094B89C37F05}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopWindowSample", "MinWindowSizeSample\MinWindowSizeSample\DesktopWindowSample.csproj", "{D085C29C-2078-45F9-9C02-42551930EF48}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopWindowSample", "DesktopWindowSample\DesktopWindowSample\DesktopWindowSample.csproj", "{D085C29C-2078-45F9-9C02-42551930EF48}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowExtensions", "WindowExtensions\WindowExtensions.csproj", "{6FB3A02C-2E51-446D-A1D6-82BA9DCC7C53}"
 EndProject
