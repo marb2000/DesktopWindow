@@ -260,7 +260,7 @@ namespace WinUIExtensions.Desktop
         private WinProc newWndProc = null;
         private IntPtr oldWndProc = IntPtr.Zero;
         [DllImport("user32")]
-        private static extern IntPtr SetWindowLong(IntPtr hWnd, PInvoke.User32.WindowLongIndexFlags nIndex, WinProc newProc);
+        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, PInvoke.User32.WindowLongIndexFlags nIndex, WinProc newProc);
         [DllImport("user32.dll")]
         static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, PInvoke.User32.WindowMessage Msg, IntPtr wParam, IntPtr lParam);
 
@@ -274,7 +274,7 @@ namespace WinUIExtensions.Desktop
 
             }
             newWndProc = new WinProc(NewWindowProc);
-            oldWndProc = SetWindowLong(_hwnd, PInvoke.User32.WindowLongIndexFlags.GWL_WNDPROC, newWndProc);
+            oldWndProc = SetWindowLongPtr(_hwnd, PInvoke.User32.WindowLongIndexFlags.GWL_WNDPROC, newWndProc);
         }
 
         private void LoadIcon(IntPtr hwnd, string iconName)
