@@ -80,6 +80,18 @@ namespace WinUIExtensions.Desktop
         }
     }
 
+    public class WindowKeyDownEventArgs : EventArgs
+    {
+        public DesktopWindow Window { get; private set; }
+        public int Key { get; private set; }
+     
+        public WindowKeyDownEventArgs(DesktopWindow window, int key)
+        {
+            Window = window;
+            Key =key;
+        }
+    }
+
     public class DesktopWindow : Window
     {
         public enum Orientation { Landscape, Portrait }
@@ -122,6 +134,7 @@ namespace WinUIExtensions.Desktop
         public event EventHandler<WindowSizingEventArgs> Sizing;
         public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
         public event EventHandler<WindowOrientationChangedEventArgs> OrientationChanged;
+        public event EventHandler<WindowKeyDownEventArgs> KeyDown;
 
         public IntPtr Hwnd
         {
@@ -247,6 +260,13 @@ namespace WinUIExtensions.Desktop
             OrientationChanged.Invoke(this, windowOrientationChangedEventArgs);
         }
 
+        private void OnWindowKeyDown(int key)
+        {
+            WindowKeyDownEventArgs windowKeyDownEventArgs = new(this, key);
+            KeyDown.Invoke(this, windowKeyDownEventArgs);
+        }
+
+
         private delegate IntPtr WinProc(IntPtr hWnd, PInvoke.User32.WindowMessage Msg, IntPtr wParam, IntPtr lParam);
         private WinProc newWndProc = null;
         private IntPtr oldWndProc = IntPtr.Zero;
@@ -330,7 +350,6 @@ namespace WinUIExtensions.Desktop
                 case PInvoke.User32.WindowMessage.WM_DPICHANGED:
                     if(this.DpiChanged is not null)
                     {
-                        //g_dpi = HIWORD(wParam);
                         uint dpi = HiWord(wParam);
                         OnWindowDpiChanged((int)dpi);
                     }
@@ -344,6 +363,14 @@ namespace WinUIExtensions.Desktop
                             _currentOrientation = newOrinetation;
                             OnWindowOrientationChanged(newOrinetation);
                         }
+                    }
+                    break;
+                //This don't work.
+                case PInvoke.User32.WindowMessage.WM_KEYDOWN:
+                    if (this.KeyDown is not null)
+                    {
+                        int value = (int)wParam;
+                        OnWindowKeyDown(value);
                     }
                     break;
             }

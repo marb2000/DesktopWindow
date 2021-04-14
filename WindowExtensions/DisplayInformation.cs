@@ -114,6 +114,25 @@ namespace WinUIExtensions.Desktop
             return col;
         }
 
+        public enum UserInteractionModeEnum { Touch, Mouse };
+        public static UserInteractionModeEnum UserInteractionMode
+        {
+            get
+            {
+                // TODO: Have a counterpart event listeining the message WM_SETTINGCHANGE
+                UserInteractionModeEnum userInteractionMode = UserInteractionModeEnum.Mouse;
+                int SM_CONVERTIBLESLATEMODE = 0x2003;
+                int state = GetSystemMetrics(SM_CONVERTIBLESLATEMODE);//O for tablet
+                if(state == 0)
+                {
+                    userInteractionMode = UserInteractionModeEnum.Touch;
+                }
+                return userInteractionMode;
+            }
+        }
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto, EntryPoint = "GetSystemMetrics")]
+        private static extern int GetSystemMetrics(int nIndex);
 
         [DllImport("user32.dll")]
         static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, EnumMonitorsDelegate lpfnEnum, IntPtr dwData);
