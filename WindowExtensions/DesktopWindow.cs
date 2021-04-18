@@ -314,10 +314,25 @@ namespace WinUIExtensions.Desktop
             {
                 case PInvoke.User32.WindowMessage.WM_GETMINMAXINFO:
                     MINMAXINFO minMaxInfo = Marshal.PtrToStructure<MINMAXINFO>(lParam);
-                    minMaxInfo.ptMinTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MinWidth);
-                    minMaxInfo.ptMinTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MinHeight);
-                    minMaxInfo.ptMaxTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MaxWidth);
-                    minMaxInfo.ptMaxTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MaxHeight);
+                    if (MinWidth != default)
+                    {
+                        minMaxInfo.ptMinTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MinWidth);
+                    }
+
+                    if (MinHeight != default)
+                    {
+                        minMaxInfo.ptMinTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MinHeight);
+                    }
+
+                    if (MaxWidth != default)
+                    {
+                        minMaxInfo.ptMaxTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MaxWidth);
+                    }
+
+                    if (MaxHeight != default)
+                    {
+                        minMaxInfo.ptMaxTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MaxHeight);
+                    }
                     Marshal.StructureToPtr(minMaxInfo, lParam, true);
                     break;
 
