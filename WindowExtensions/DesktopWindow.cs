@@ -122,10 +122,10 @@ namespace WinUIExtensions.Desktop
             }
         }
         
-        public int MinWidth { get; set; }
-        public int MinHeight { get; set; }
-        public int MaxWidth { get; set; }
-        public int MaxHeight { get; set; }
+        public int MinWidth { get; set; } = -1;
+        public int MinHeight { get; set; } = -1;
+        public int MaxWidth { get; set; } = -1;
+        public int MaxHeight { get; set; } = -1;
 
         public bool IsClosing { get; set; }
 
@@ -314,10 +314,10 @@ namespace WinUIExtensions.Desktop
             {
                 case PInvoke.User32.WindowMessage.WM_GETMINMAXINFO:
                     MINMAXINFO minMaxInfo = Marshal.PtrToStructure<MINMAXINFO>(lParam);
-                    minMaxInfo.ptMinTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MinWidth);
-                    minMaxInfo.ptMinTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MinHeight);
-                    minMaxInfo.ptMaxTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MaxWidth);
-                    minMaxInfo.ptMaxTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MaxHeight);
+                    if (MinWidth >= 0) minMaxInfo.ptMinTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MinWidth);
+                    if (MinHeight >= 0) minMaxInfo.ptMinTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MinHeight);
+                    if (MaxWidth > 0) minMaxInfo.ptMaxTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MaxWidth);
+                    if (MaxHeight > 0) minMaxInfo.ptMaxTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MaxHeight);
                     Marshal.StructureToPtr(minMaxInfo, lParam, true);
                     break;
 
