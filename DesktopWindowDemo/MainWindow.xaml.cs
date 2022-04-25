@@ -3,22 +3,23 @@ using Microsoft.UI.Xaml.Controls;
 using System;
 using WinUIExtensions.Desktop;
 
-
-namespace DesktopWindowSample
+namespace DesktopWindowDemo
 {
+    /// <summary>
+    /// An empty window that can be used on its own or navigated to within a Frame.
+    /// </summary>
     public sealed partial class MainWindow : DesktopWindow
     {
         public MainWindow()
         {
             this.InitializeComponent();
-
             // MUX.Window features
             this.Title = "Showcase DesktopWindow API";
-            this.ExtendsContentIntoTitleBar = true;
-            SetTitleBar(myTitleBar);
+            //this.ExtendsContentIntoTitleBar = true;
+            //SetTitleBar(myTitleBar);
 
             //DesktopWindow Features
-            
+
             // Set the Max height and width in effective pixels
             this.MaxHeight = 800;
             this.MaxWidth = 1024;
@@ -31,8 +32,12 @@ namespace DesktopWindowSample
             this.Width = 600;
             this.Height = 600;
 
+            //Fire when the OS Setting Preferred Language Changes.
+            this.PreferredLanguageChanged += MainWindow_LanguageChanged;
+            preferredLanguageTBox.Text = $"PreferredLanguageChanged {Windows.System.UserProfile.GlobalizationPreferences.Languages[0]}";
+
             // Set the Icon of the window. 
-            this.Icon = "WinUI3.ico";
+            this.Icon = "Assets/WinUI3.ico";
 
             // Set the placement of the Window top, left
             SetWindowPlacement(0, 0);
@@ -50,7 +55,7 @@ namespace DesktopWindowSample
             this.OrientationChanged += MainWindow_OrientationChanged;
 
             //Get the heigh and the width
-            debugTBox.Text = $" Size (Height: { this.Height } Width: { this.Width })";
+            debugTBox.Text = $" Size (Height: {this.Height} Width: {this.Width})";
 
 
             //Get the List of monitors/displays
@@ -68,53 +73,34 @@ namespace DesktopWindowSample
             }
 
             //Get the current DPI of the display that host the window
-            dpiChangedTBox.Text =  $"DPI: {this.Dpi}";
+            dpiChangedTBox.Text = $"DPI: {this.Dpi}";
+        }
+
+        private void MainWindow_LanguageChanged(object sender, WindowPreferredLanguageChangedEventArgs e)
+        {
+            preferredLanguageTBox.Text = $"Preferred Language: Old Language: {e.OldLanguage } Current Language {e.NewLanguage}";
         }
 
         private void MainWindow_OrientationChanged(object sender, WindowOrientationChangedEventArgs e)
         {
-            dpiChangedTBox.Text = $"DPI: {this.Dpi} + Orientation: { e.Orientation.ToString("g")}";
+            dpiChangedTBox.Text = $"DPI: {this.Dpi} + Orientation: {e.Orientation.ToString("g")}";
         }
 
         private void MainWindow_DpiChanged(object sender, WindowDpiChangedEventArgs e)
         {
-            dpiChangedTBox.Text = $"DPI Changed:{ e.Dpi} - {this.Dpi} ";
+            dpiChangedTBox.Text = $"DPI Changed:{e.Dpi} - {this.Dpi} ";
         }
-
-        //public static T FindControl<T>(DependencyObject parent, string ControlName) where T : FrameworkElement
-        //{
-        //    if (parent == null)
-        //        return null;
-
-        //    if (parent.GetType() == typeof(T) && ((T)parent).Name == ControlName)
-        //    {
-        //        return (T)parent;
-        //    }
-        //    T result = null;
-        //    int count = VisualTreeHelper.GetChildrenCount(parent);
-        //    for (int i = 0; i < count; i++)
-        //    {
-        //        DependencyObject child = VisualTreeHelper.GetChild(parent, i);
-
-        //        if (FindControl<T>(child, ControlName) != null)
-        //        {
-        //            result = FindControl<T>(child, ControlName);
-        //            break;
-        //        }
-        //    }
-        //    return result;
-        //}
 
         private void MainWindow_Sizing(object sender, WindowSizingEventArgs e)
         {
             var windowPosition = GetWindowPosition();
-            debugTBox.Text = $"Height: { this.Height } Width: { this.Width }\n " +
+            debugTBox.Text = $"Height: {this.Height} Width: {this.Width}\n " +
                 $"Top: {windowPosition.Top} Left:{windowPosition.Left}";
         }
 
         private void MainWindow_Moving(object sender, WindowMovingEventArgs e)
         {
-            debugTBox.Text = $"Height: { this.Height } Width: { this.Width }\n " +
+            debugTBox.Text = $"Height: {this.Height} Width: {this.Width}\n " +
                 $"Top: {e.NewPosition.Top} Left:{e.NewPosition.Left}";
         }
 
@@ -175,7 +161,7 @@ namespace DesktopWindowSample
         {
             BringToTop();
         }
-        
+
         private void OnClosingApplication(object sender, RoutedEventArgs e)
         {
             Application.Current.Exit();

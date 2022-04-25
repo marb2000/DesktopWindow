@@ -7,7 +7,6 @@ using WinRT;
 
 namespace WinUIExtensions.Desktop
 {
-
     public class WindowPosition
     {
         public int Top { get; private set; }
@@ -43,11 +42,25 @@ namespace WinUIExtensions.Desktop
         }
     }
 
+    public class WindowPreferredLanguageChangedEventArgs : EventArgs
+    {
+        public DesktopWindow Window { get; private set; }
+        public string OldLanguage { get; private set; }
+        public string NewLanguage { get; private set; }
+
+        public WindowPreferredLanguageChangedEventArgs(DesktopWindow window, string oldLanguage, string newLanguage)
+        {
+            Window = window;
+            OldLanguage = oldLanguage;
+            NewLanguage = newLanguage;
+        }
+    }
+
     public class WindowDpiChangedEventArgs : EventArgs
     {
         public DesktopWindow Window { get; private set; }
-        public int Dpi{ get; private set; }
-        
+        public int Dpi { get; private set; }
+
         public WindowDpiChangedEventArgs(DesktopWindow window, int newDpi)
         {
             Window = window;
@@ -84,20 +97,18 @@ namespace WinUIExtensions.Desktop
     {
         public DesktopWindow Window { get; private set; }
         public int Key { get; private set; }
-     
+
         public WindowKeyDownEventArgs(DesktopWindow window, int key)
         {
             Window = window;
-            Key =key;
+            Key = key;
         }
     }
 
     public class DesktopWindow : Window
     {
         public enum Orientation { Landscape, Portrait }
-
         public enum Placement { Center, TopLeftCorner, BottomLeftCorner } //Future: align to the top corner, etc..
-
         public int Width
         {
             get
@@ -114,14 +125,14 @@ namespace WinUIExtensions.Desktop
         {
             get
             {
-                return DisplayInformation.ConvertPixelToEpx(_hwnd,GetHeightWin32(_hwnd));
+                return DisplayInformation.ConvertPixelToEpx(_hwnd, GetHeightWin32(_hwnd));
             }
             set
             {
                 SetWindowHeightWin32(_hwnd, DisplayInformation.ConvertEpxToPixel(_hwnd, value));
             }
         }
-        
+
         public int MinWidth { get; set; } = -1;
         public int MinHeight { get; set; } = -1;
         public int MaxWidth { get; set; } = -1;
@@ -130,11 +141,14 @@ namespace WinUIExtensions.Desktop
         public bool IsClosing { get; set; }
 
         public event EventHandler<WindowClosingEventArgs> Closing;
+        public event EventHandler<WindowPreferredLanguageChangedEventArgs> PreferredLanguageChanged;
         public event EventHandler<WindowMovingEventArgs> Moving;
         public event EventHandler<WindowSizingEventArgs> Sizing;
         public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
         public event EventHandler<WindowOrientationChangedEventArgs> OrientationChanged;
         public event EventHandler<WindowKeyDownEventArgs> KeyDown;
+
+        private string _preferredLanguage;
 
         public IntPtr Hwnd
         {
@@ -146,11 +160,11 @@ namespace WinUIExtensions.Desktop
             get { return PInvoke.User32.GetDpiForWindow(_hwnd); }
         }
 
-
         public DesktopWindow()
         {
             SubClassingWin32();
             _currentOrientation = GetWindowOrientationWin32(_hwnd);
+            _preferredLanguage = Windows.System.UserProfile.GlobalizationPreferences.Languages[0];
         }
 
         public void SetWindowPlacement(Placement placement)
@@ -183,7 +197,7 @@ namespace WinUIExtensions.Desktop
             return new(DisplayInformation.ConvertPixelToEpx(_hwnd, windowPosition.Top),
                        DisplayInformation.ConvertPixelToEpx(_hwnd, windowPosition.Left));
         }
-                
+
         public string Icon
         {
             get { return _iconResource; }
@@ -232,11 +246,17 @@ namespace WinUIExtensions.Desktop
             Closing.Invoke(this, windowClosingEventArgs);
         }
 
+        private void OnWindowLanguageChanged(string oldLanguage, string newLanguage)
+        {
+            WindowPreferredLanguageChangedEventArgs eventArgs = new(this, oldLanguage, newLanguage);
+            PreferredLanguageChanged.Invoke(this, eventArgs);
+        }
+
         private void OnWindowMoving()
         {
             var windowPosition = GetWindowPositionWin32(_hwnd);
             //windowPosition comes in pixels(Win32), so you need to convert into epx
-            WindowMovingEventArgs windowMovingEventArgs = new(this, 
+            WindowMovingEventArgs windowMovingEventArgs = new(this,
                 new WindowPosition(
                     DisplayInformation.ConvertPixelToEpx(_hwnd, windowPosition.Top),
                     DisplayInformation.ConvertPixelToEpx(_hwnd, windowPosition.Left)));
@@ -266,7 +286,6 @@ namespace WinUIExtensions.Desktop
             KeyDown.Invoke(this, windowKeyDownEventArgs);
         }
 
-
         private delegate IntPtr WinProc(IntPtr hWnd, PInvoke.User32.WindowMessage Msg, IntPtr wParam, IntPtr lParam);
         private WinProc newWndProc = null;
         private IntPtr oldWndProc = IntPtr.Zero;
@@ -289,7 +308,7 @@ namespace WinUIExtensions.Desktop
         private void SubClassingWin32()
         {
             //Get the Window's HWND
-            _hwnd = this.As<IWindowNative>().WindowHandle;
+            _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             if (_hwnd == IntPtr.Zero)
             {
                 throw new NullReferenceException("The Window Handle is null.");
@@ -334,7 +353,7 @@ namespace WinUIExtensions.Desktop
             public PInvoke.POINT ptMinTrackSize;
             public PInvoke.POINT ptMaxTrackSize;
         }
-        
+
         private IntPtr NewWindowProc(IntPtr hWnd, PInvoke.User32.WindowMessage Msg, IntPtr wParam, IntPtr lParam)
         {
             switch (Msg)
@@ -346,6 +365,15 @@ namespace WinUIExtensions.Desktop
                     if (MaxWidth > 0) minMaxInfo.ptMaxTrackSize.x = DisplayInformation.ConvertEpxToPixel(hWnd, MaxWidth);
                     if (MaxHeight > 0) minMaxInfo.ptMaxTrackSize.y = DisplayInformation.ConvertEpxToPixel(hWnd, MaxHeight);
                     Marshal.StructureToPtr(minMaxInfo, lParam, true);
+                    break;
+
+                case PInvoke.User32.WindowMessage.WM_SETTINGCHANGE:
+                    var newLanguage = Windows.System.UserProfile.GlobalizationPreferences.Languages[0];
+                    if (_preferredLanguage != newLanguage)
+                    {
+                        OnWindowLanguageChanged(_preferredLanguage, newLanguage);
+                        _preferredLanguage = newLanguage;
+                    }
                     break;
 
                 case PInvoke.User32.WindowMessage.WM_CLOSE:
@@ -375,7 +403,7 @@ namespace WinUIExtensions.Desktop
                     }
                     break;
                 case PInvoke.User32.WindowMessage.WM_DPICHANGED:
-                    if(this.DpiChanged is not null)
+                    if (this.DpiChanged is not null)
                     {
                         uint dpi = HiWord(wParam);
                         OnWindowDpiChanged((int)dpi);
@@ -406,7 +434,7 @@ namespace WinUIExtensions.Desktop
 
         private Orientation GetWindowOrientationWin32(IntPtr hwnd)
         {
-            Orientation orientationEnum; 
+            Orientation orientationEnum;
             int theScreenWidth = DisplayInformation.GetDisplay(hwnd).ScreenWidth;
             int theScreenHeight = DisplayInformation.GetDisplay(hwnd).ScreenHeight;
             if (theScreenWidth > theScreenHeight)
@@ -541,13 +569,6 @@ namespace WinUIExtensions.Desktop
             }
         }
 
-        [ComImport]
-        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        [Guid("EECDBF0E-BAE9-4CB6-A68E-9598E1CB57BB")]
-        internal interface IWindowNative
-        {
-            IntPtr WindowHandle { get; }
-        }
         #endregion
     }
 }

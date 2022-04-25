@@ -1,20 +1,23 @@
-﻿<WinUI:DesktopWindow x:Class="DesktopWindowSample.MainWindow"
+﻿<WinUI:DesktopWindow
+    x:Class="DesktopWindowDemo.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:DesktopWindowSample"
-    xmlns:WinUI="using:WinUIExtensions.Desktop"         
+    xmlns:local="using:DesktopWindowDemo"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+     xmlns:WinUI="using:WinUIExtensions.Desktop"     
     mc:Ignorable="d">
+
 
     <StackPanel x:Name="MainGrid">
 
-        <StackPanel Height="35" Orientation="Horizontal" 
+        <!-- Uncomment it for using Custom Title Bar APIs-->
+        <!--<StackPanel Height="35" Orientation="Horizontal" 
                     Spacing="15" x:Name="myTitleBar" HorizontalAlignment="Stretch" VerticalAlignment="Top" >
-            <Image Source="Images/windowIcon.gif" />
+            <Image Source="Assets/windowIcon.gif" />
             <TextBlock VerticalAlignment="Center" Text="{x:Bind Title, Mode=OneTime}" />
-        </StackPanel>
-                
+        </StackPanel>-->
+
         <StackPanel Margin="20" VerticalAlignment="Center" HorizontalAlignment="Left" Spacing="20" 
                      Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
             <TextBlock Text="Window Placement" />
@@ -40,6 +43,8 @@
             <TextBlock Text="" x:Name="debugTBox" TextWrapping="WrapWholeWords"/>
             <TextBlock Text="" x:Name="systemTBox" TextWrapping="WrapWholeWords"/>
             <TextBlock Text="" x:Name="dpiChangedTBox" TextWrapping="WrapWholeWords"/>
+            <TextBlock Text="" x:Name="preferredLanguageTBox" TextWrapping="WrapWholeWords"/>
         </StackPanel>
     </StackPanel>
 </WinUI:DesktopWindow>
+
